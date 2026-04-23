@@ -1,0 +1,24 @@
+{
+  "name": "congmingpay/php-sdk",
+  "description": "PHP SDK for CongmingPay payment APIs.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=7.4",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "CongmingPay\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "CongmingPay\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "php tests/signature_test.php"
+  }
+}

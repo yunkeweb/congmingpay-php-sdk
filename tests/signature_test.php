@@ -109,4 +109,55 @@ $payloadWithoutProgramId = json_decode((string) $httpWithoutProgramId->request->
 expect_true(is_array($payloadWithoutProgramId), 'Request payload without program_id is not JSON.');
 expect_true(!array_key_exists('program_id', $payloadWithoutProgramId), 'program_id should not be injected when omitted.');
 
+$httpDefaults = new class implements ClientInterface {
+    public ?RequestInterface $request = null;
+
+    public function sendRequest(RequestInterface $request): ResponseInterface
+    {
+        $this->request = $request;
+
+        return new Response(200, ['Content-Type' => 'application/json'], '{"result_code":"success"}', 'OK');
+    }
+};
+$configWithDefaults = new Config(
+    'https://pay.example.com',
+    null,
+    'sid',
+    'secret',
+    30,
+    true,
+    [
+        'notify_url' => 'https://merchant.example.com/default-notify',
+        'ver' => '3.0',
+    ],
+    [
+        'buyPay' => [
+            'device' => 'DEFAULT_DEVICE',
+            'order_type' => 'weixin',
+        ],
+    ]
+);
+$clientWithDefaults = new CongmingPayClient($configWithDefaults, $httpDefaults);
+$clientWithDefaults->buyPay([
+    'money' => '1.00',
+    'order_id' => 'OID_DEFAULT',
+]);
+$payloadWithDefaults = json_decode((string) $httpDefaults->request->getBody(), true);
+expect_true(is_array($payloadWithDefaults), 'Request payload with defaults is not JSON.');
+expect_true($payloadWithDefaults['notify_url'] === 'https://merchant.example.com/default-notify', 'Default notify_url was not applied.');
+expect_true($payloadWithDefaults['ver'] === '3.0', 'Default ver was not applied.');
+expect_true($payloadWithDefaults['device'] === 'DEFAULT_DEVICE', 'Endpoint default device was not applied.');
+expect_true($payloadWithDefaults['order_type'] === 'weixin', 'Endpoint default order_type was not applied.');
+
+$clientWithDefaults->buyPay([
+    'money' => '2.00',
+    'order_id' => 'OID_OVERRIDE',
+    'notify_url' => 'https://merchant.example.com/override-notify',
+    'device' => 'OVERRIDE_DEVICE',
+]);
+$payloadOverrideDefaults = json_decode((string) $httpDefaults->request->getBody(), true);
+expect_true(is_array($payloadOverrideDefaults), 'Request payload with overrides is not JSON.');
+expect_true($payloadOverrideDefaults['notify_url'] === 'https://merchant.example.com/override-notify', 'Per-request notify_url should override defaults.');
+expect_true($payloadOverrideDefaults['device'] === 'OVERRIDE_DEVICE', 'Per-request device should override defaults.');
+
 echo "OK\n";

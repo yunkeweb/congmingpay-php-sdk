@@ -171,15 +171,19 @@ final class CongmingPayClient
      */
     public function request(string $path, array $params = []): ApiResponse
     {
-        return $this->sendJson($path, $params);
+        return $this->sendJson($path, $this->signedPayload($params));
     }
 
     /** @param array<string, mixed> $params */
-    public function signedPayload(array $params): array
+    public function signedPayload(array $params, ?string $endpointKey = null): array
     {
-        $payload = array_merge([
-            'shop_id' => $this->config->getShopId(),
-        ], $params);
+        $payload = array_merge(
+            $this->config->getDefaultParams(),
+            $endpointKey === null ? [] : $this->config->getEndpointDefaults($endpointKey),
+            $params
+        );
+        $payload = $this->removeNulls($payload);
+        $payload['shop_id'] = $this->config->getShopId();
 
         if ($this->config->getProgramId() !== null && !array_key_exists('program_id', $payload)) {
             $payload['program_id'] = $this->config->getProgramId();
@@ -197,21 +201,21 @@ final class CongmingPayClient
             throw new InvalidArgumentException(sprintf('Unknown API method "%s".', $name));
         }
 
-        $this->assertRequired($params, self::REQUIRED[$name] ?? []);
+        $payload = $this->signedPayload($params, $name);
+        $this->assertRequired($payload, self::REQUIRED[$name] ?? []);
 
         $this->logger->info('Calling CongmingPay API.', [
             'api' => $name,
             'endpoint' => self::ENDPOINTS[$name],
         ]);
 
-        return $this->sendJson(self::ENDPOINTS[$name], $params);
+        return $this->sendJson(self::ENDPOINTS[$name], $payload);
     }
 
     /** @param array<string, mixed> $params */
-    private function sendJson(string $path, array $params): ApiResponse
+    private function sendJson(string $path, array $payload): ApiResponse
     {
         $url = $this->config->getBaseUri() . '/' . ltrim($path, '/');
-        $payload = $this->signedPayload($params);
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($body === false) {
             throw new InvalidResponseException('Failed to encode request payload: ' . json_last_error_msg());
@@ -252,6 +256,21 @@ final class CongmingPayClient
         }
 
         return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    private function removeNulls(array $params): array
+    {
+        foreach ($params as $key => $value) {
+            if ($value === null) {
+                unset($params[$key]);
+            }
+        }
+
+        return $params;
     }
 
     /**

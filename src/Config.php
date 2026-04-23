@@ -20,7 +20,26 @@ final class Config
 
     private bool $verifySsl;
 
-    public function __construct(string $baseUri, ?string $programId, string $shopId, string $secretKey, int $timeout = 30, bool $verifySsl = true)
+    /** @var array<string, mixed> */
+    private array $defaultParams;
+
+    /** @var array<string, array<string, mixed>> */
+    private array $endpointDefaults;
+
+    /**
+     * @param array<string, mixed> $defaultParams
+     * @param array<string, array<string, mixed>> $endpointDefaults
+     */
+    public function __construct(
+        string $baseUri,
+        ?string $programId,
+        string $shopId,
+        string $secretKey,
+        int $timeout = 30,
+        bool $verifySsl = true,
+        array $defaultParams = [],
+        array $endpointDefaults = []
+    )
     {
         $baseUri = rtrim(trim($baseUri), '/');
         if ($baseUri === '') {
@@ -36,6 +55,8 @@ final class Config
         $this->secretKey = $secretKey;
         $this->timeout = $timeout;
         $this->verifySsl = $verifySsl;
+        $this->defaultParams = $defaultParams;
+        $this->endpointDefaults = $endpointDefaults;
     }
 
     public function getBaseUri(): string
@@ -66,5 +87,21 @@ final class Config
     public function shouldVerifySsl(): bool
     {
         return $this->verifySsl;
+    }
+
+    /** @return array<string, mixed> */
+    public function getDefaultParams(): array
+    {
+        return $this->defaultParams;
+    }
+
+    /** @return array<string, mixed> */
+    public function getEndpointDefaults(string $endpointKey): array
+    {
+        if (!isset($this->endpointDefaults[$endpointKey]) || !is_array($this->endpointDefaults[$endpointKey])) {
+            return [];
+        }
+
+        return $this->endpointDefaults[$endpointKey];
     }
 }

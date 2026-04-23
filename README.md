@@ -36,7 +36,19 @@ $config = new Config(
     'https://your-congmingpay-domain.com',
     null, // optional program_id; pass your program id here when your merchant requires it
     'your_shop_id',
-    'your_secret_key'
+    'your_secret_key',
+    30,
+    true,
+    [
+        'notify_url' => 'https://merchant.example.com/default-notify',
+        'ver' => '3.0',
+    ],
+    [
+        'buyPay' => [
+            'device' => 'POS-01',
+            'order_type' => 'weixin',
+        ],
+    ]
 );
 
 $logger = new Logger('congmingpay');
@@ -47,18 +59,15 @@ $client = new CongmingPayClient($config, null, $logger);
 $response = $client->buyPay([
     'money' => '12.35',
     'order_id' => '202604231200000001',
-    'order_type' => 'weixin',
-    'device' => '100101',
-    'notify_url' => 'https://merchant.example.com/payment/notify',
     'is_notify_new' => '1',
-    'ver' => '3.0',
     'goods_msg' => 'Order 202604231200000001',
 ]);
 
 $data = $response->toArray();
 ```
 
-The client automatically adds `shop_id` and `sign`. If `program_id` is configured, it is also added. Request signing follows the document rule: sort request keys, join as `key=value`, append `key=secret`, then uppercase MD5.
+The client automatically adds `shop_id` and `sign`. If `program_id` is configured, it is also added. Parameters are merged in this order: global defaults -> endpoint defaults -> per-request params. Per-request params override defaults.
+Request signing follows the document rule: sort request keys, join as `key=value`, append `key=secret`, then uppercase MD5.
 If no logger is provided, the SDK uses PSR-3 `NullLogger`.
 
 The SDK uses these PSR contracts:

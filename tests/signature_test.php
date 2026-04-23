@@ -7,13 +7,13 @@ require __DIR__ . '/../vendor/autoload.php';
 use CongmingPay\CallbackVerifier;
 use CongmingPay\Config;
 use CongmingPay\CongmingPayClient;
-use CongmingPay\Http\HttpClientInterface;
 use CongmingPay\Http\Request;
 use CongmingPay\Http\Response;
 use CongmingPay\Support\Signer;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\AbstractLogger;
 
 function expect_true(bool $condition, string $message): void
 {
@@ -42,31 +42,45 @@ $callbackPayload['sign'] = strtoupper(md5('money=50.0&orderId=CZ2021111117221351
 $verifier = new CallbackVerifier('07DEA4C6AD8A23C3A416B9FD66DCC8A9');
 expect_true($verifier->verifyPayment($callbackPayload) === true, 'Callback verification failed.');
 
-$http = new class implements HttpClientInterface {
-    /** @var array<string, mixed> */
-    public array $payload = [];
+$logger = new class extends AbstractLogger {
+    /** @var array<int, array{level: mixed, message: string, context: array<string, mixed>}> */
+    public array $records = [];
 
-    public function postJson(string $url, array $payload, array $headers = []): Response
+    public function log($level, $message, array $context = []): void
     {
-        $this->payload = $payload;
-
-        return new Response(200, [], '{"result_code":"success"}', ['result_code' => 'success']);
-    }
-
-    public function sendRequest(RequestInterface $request): ResponseInterface
-    {
-        return new Response(200, [], '{"result_code":"success"}', ['result_code' => 'success']);
+        $this->records[] = [
+            'level' => $level,
+            'message' => (string) $message,
+            'context' => $context,
+        ];
     }
 };
 
-$client = new CongmingPayClient(new Config('https://pay.example.com', 'pid', 'sid', 'secret'), $http);
-$client->query(['order_id' => 'OID']);
+$http = new class implements ClientInterface {
+    public ?RequestInterface $request = null;
 
-expect_true($http->payload['program_id'] === 'pid', 'program_id was not injected.');
-expect_true($http->payload['shop_id'] === 'sid', 'shop_id was not injected.');
-expect_true(isset($http->payload['sign']), 'sign was not injected.');
+    public function sendRequest(RequestInterface $request): ResponseInterface
+    {
+        $this->request = $request;
 
-$response = new Response(200, ['Content-Type' => 'application/json'], '{"result_code":"success"}', ['result_code' => 'success']);
+        return new Response(200, ['Content-Type' => 'application/json'], '{"result_code":"success"}', 'OK');
+    }
+};
+
+$client = new CongmingPayClient(new Config('https://pay.example.com', 'pid', 'sid', 'secret'), $http, $logger);
+$apiResponse = $client->query(['order_id' => 'OID']);
+
+expect_true($http->request instanceof RequestInterface, 'PSR request was not sent.');
+$payload = json_decode((string) $http->request->getBody(), true);
+expect_true(is_array($payload), 'Request payload is not JSON.');
+expect_true($payload['program_id'] === 'pid', 'program_id was not injected.');
+expect_true($payload['shop_id'] === 'sid', 'shop_id was not injected.');
+expect_true(isset($payload['sign']), 'sign was not injected.');
+expect_true($apiResponse->isSuccessful() === true, 'API response should be successful.');
+expect_true($apiResponse->getResponse() instanceof ResponseInterface, 'API response does not expose PSR response.');
+expect_true(count($logger->records) > 0, 'Logger did not receive SDK records.');
+
+$response = new Response(200, ['Content-Type' => 'application/json'], '{"result_code":"success"}', 'OK');
 expect_true($response instanceof ResponseInterface, 'Response does not implement PSR-7 ResponseInterface.');
 expect_true($response->getHeaderLine('content-type') === 'application/json', 'Header lookup is not PSR-7 compatible.');
 expect_true((string) $response->getBody() === '{"result_code":"success"}', 'Body stream does not expose response body.');

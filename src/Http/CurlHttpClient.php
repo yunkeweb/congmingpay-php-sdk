@@ -6,54 +6,41 @@ namespace CongmingPay\Http;
 
 use CongmingPay\Config;
 use CongmingPay\Exception\HttpException;
-use CongmingPay\Exception\InvalidResponseException;
+use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
-final class CurlHttpClient implements HttpClientInterface
+final class CurlHttpClient implements ClientInterface
 {
     private Config $config;
 
-    public function __construct(Config $config)
+    private LoggerInterface $logger;
+
+    public function __construct(Config $config, ?LoggerInterface $logger = null)
     {
         $this->config = $config;
-    }
-
-    public function postJson(string $url, array $payload, array $headers = []): Response
-    {
-        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($body === false) {
-            throw new InvalidResponseException('Failed to encode request payload: ' . json_last_error_msg());
-        }
-
-        $request = new Request('POST', $url, array_merge([
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-        ], $headers), $body);
-        $response = $this->sendRequest($request);
-        if (!$response instanceof Response) {
-            throw new InvalidResponseException('Unexpected response implementation.');
-        }
-
-        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
-            throw new HttpException(sprintf('Unexpected HTTP status code %d: %s', $response->getStatusCode(), $response->getRawBody()));
-        }
-
-        return $response;
+        $this->logger = $logger ?? new NullLogger();
     }
 
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
         $responseHeaders = [];
         $reasonPhrase = '';
+        $this->logger->info('Sending CongmingPay HTTP request.', [
+            'method' => $request->getMethod(),
+            'uri' => (string) $request->getUri(),
+        ]);
+
         $curl = curl_init((string) $request->getUri());
         if ($curl === false) {
+            $this->logger->error('Failed to initialize cURL.');
             throw new HttpException('Failed to initialize curl.');
         }
 
-        curl_setopt_array($curl, [
+        $options = [
             CURLOPT_CUSTOMREQUEST => $request->getMethod(),
-            CURLOPT_POSTFIELDS => (string) $request->getBody(),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => $this->config->getTimeout(),
             CURLOPT_CONNECTTIMEOUT => $this->config->getTimeout(),
@@ -76,29 +63,43 @@ final class CurlHttpClient implements HttpClientInterface
 
                 return $length;
             },
-        ]);
+        ];
+
+        $requestBody = (string) $request->getBody();
+        if ($requestBody !== '') {
+            $options[CURLOPT_POSTFIELDS] = $requestBody;
+        }
+
+        curl_setopt_array($curl, $options);
 
         $raw = curl_exec($curl);
         if ($raw === false) {
             $message = curl_error($curl);
             $errno = curl_errno($curl);
             curl_close($curl);
+            $this->logger->error('CongmingPay HTTP request failed.', [
+                'method' => $request->getMethod(),
+                'uri' => (string) $request->getUri(),
+                'curl_errno' => $errno,
+                'error' => $message,
+            ]);
             throw new HttpException(sprintf('HTTP request failed [%d]: %s', $errno, $message));
         }
 
         $statusCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
         curl_close($curl);
 
-        $json = json_decode((string) $raw, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $json = null;
-        }
+        $this->logger->info('CongmingPay HTTP response received.', [
+            'method' => $request->getMethod(),
+            'uri' => (string) $request->getUri(),
+            'status_code' => $statusCode,
+        ]);
 
-        return new Response($statusCode, $responseHeaders, (string) $raw, is_array($json) ? $json : null, $reasonPhrase);
+        return new Response($statusCode, $responseHeaders, (string) $raw, $reasonPhrase);
     }
 
     /**
-     * @param array<string, string> $headers
+     * @param array<string, string[]> $headers
      * @return string[]
      */
     private function formatHeaders(array $headers): array

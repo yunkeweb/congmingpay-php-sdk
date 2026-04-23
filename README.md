@@ -16,6 +16,12 @@ composer install
 
 ## Usage
 
+For the logging example below:
+
+```bash
+composer require monolog/monolog
+```
+
 ```php
 <?php
 
@@ -23,6 +29,8 @@ require __DIR__ . '/vendor/autoload.php';
 
 use CongmingPay\Config;
 use CongmingPay\CongmingPayClient;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 $config = new Config(
     'https://your-congmingpay-domain.com',
@@ -31,7 +39,10 @@ $config = new Config(
     'your_secret_key'
 );
 
-$client = new CongmingPayClient($config);
+$logger = new Logger('congmingpay');
+$logger->pushHandler(new StreamHandler(__DIR__ . '/congmingpay.log'));
+
+$client = new CongmingPayClient($config, null, $logger);
 
 $response = $client->buyPay([
     'money' => '12.35',
@@ -48,25 +59,34 @@ $data = $response->toArray();
 ```
 
 The client automatically adds `program_id`, `shop_id`, and `sign`. Request signing follows the document rule: sort request keys, join as `key=value`, append `key=secret`, then uppercase MD5.
+If no logger is provided, the SDK uses PSR-3 `NullLogger`.
 
-Responses implement PSR-7 `Psr\Http\Message\ResponseInterface`.
-Requests use PSR-7 `Psr\Http\Message\RequestInterface`, and the bundled cURL client implements PSR-18 `Psr\Http\Client\ClientInterface`.
+The SDK uses these PSR contracts:
+
+- PSR-4 autoloading
+- PSR-7 requests, responses, streams, and URIs
+- PSR-18 HTTP client transport
+- PSR-3 logging
+
+API methods return `CongmingPay\ApiResponse`, which wraps the raw PSR-7 response and decoded JSON data.
 
 ```php
-$statusCode = $response->getStatusCode();
-$contentType = $response->getHeaderLine('content-type');
-$rawBody = (string) $response->getBody(); // PSR-7 stream
-$rawBody = $response->getRawBody();       // convenience alias
-$data = $response->toArray();             // decoded JSON payload
+$psrResponse = $response->getResponse();
+$statusCode = $psrResponse->getStatusCode();
+$contentType = $psrResponse->getHeaderLine('content-type');
+$rawBody = (string) $psrResponse->getBody();
+$data = $response->toArray();
 ```
 
 ```php
 use CongmingPay\Http\Request;
+use Psr\Http\Client\ClientInterface;
 
 $psrRequest = new Request('POST', 'https://merchant.example.com/api', [
     'Content-Type' => 'application/json',
 ], '{"foo":"bar"}');
 
+/** @var ClientInterface $httpClient */
 $psrResponse = $httpClient->sendRequest($psrRequest);
 ```
 

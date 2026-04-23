@@ -24,14 +24,10 @@ final class Response implements ResponseInterface
 
     private StreamInterface $body;
 
-    /** @var array<string, mixed>|null */
-    private ?array $json;
-
     /**
      * @param array<string, string|string[]> $headers
-     * @param array<string, mixed>|null $json
      */
-    public function __construct(int $statusCode, array $headers, string $body, ?array $json, string $reasonPhrase = '', string $protocolVersion = '1.1')
+    public function __construct(int $statusCode, array $headers, string $body, string $reasonPhrase = '', string $protocolVersion = '1.1')
     {
         $this->statusCode = $statusCode;
         $this->reasonPhrase = $reasonPhrase;
@@ -41,7 +37,6 @@ final class Response implements ResponseInterface
             $this->setHeader($name, $value);
         }
         $this->body = new Stream($body);
-        $this->json = $json;
         $this->protocolVersion = $protocolVersion;
     }
 
@@ -156,28 +151,6 @@ final class Response implements ResponseInterface
         $new->body = $body;
 
         return $new;
-    }
-
-    public function getRawBody(): string
-    {
-        return (string) $this->body;
-    }
-
-    /** @return array<string, mixed>|null */
-    public function getJson(): ?array
-    {
-        return $this->json;
-    }
-
-    /** @return array<string, mixed> */
-    public function toArray(): array
-    {
-        return $this->json ?? [];
-    }
-
-    public function isSuccess(): bool
-    {
-        return isset($this->json['result_code']) && strtolower((string) $this->json['result_code']) === 'success';
     }
 
     /** @param string|string[] $value */

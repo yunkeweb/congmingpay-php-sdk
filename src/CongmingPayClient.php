@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace CongmingPay;
 
 use CongmingPay\Http\CurlHttpClient;
-use CongmingPay\Http\HttpClientInterface;
-use CongmingPay\Http\Response;
+use CongmingPay\Http\Request;
+use CongmingPay\Exception\HttpException;
+use CongmingPay\Exception\InvalidResponseException;
 use CongmingPay\Support\Signer;
 use InvalidArgumentException;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 final class CongmingPayClient
 {
@@ -52,106 +57,109 @@ final class CongmingPayClient
 
     private Config $config;
 
-    private HttpClientInterface $httpClient;
+    private ClientInterface $httpClient;
 
-    public function __construct(Config $config, ?HttpClientInterface $httpClient = null)
+    private LoggerInterface $logger;
+
+    public function __construct(Config $config, ?ClientInterface $httpClient = null, ?LoggerInterface $logger = null)
     {
         $this->config = $config;
-        $this->httpClient = $httpClient ?? new CurlHttpClient($config);
+        $this->logger = $logger ?? new NullLogger();
+        $this->httpClient = $httpClient ?? new CurlHttpClient($config, $this->logger);
     }
 
     /** @param array<string, mixed> $params */
-    public function buyPay(array $params): Response
+    public function buyPay(array $params): ApiResponse
     {
         return $this->call('buyPay', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function jsNativePay(array $params): Response
+    public function jsNativePay(array $params): ApiResponse
     {
         return $this->call('jsNativePay', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function microPay(array $params): Response
+    public function microPay(array $params): ApiResponse
     {
         return $this->call('microPay', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function prePay(array $params): Response
+    public function prePay(array $params): ApiResponse
     {
         return $this->call('prePay', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function miniAppPay(array $params): Response
+    public function miniAppPay(array $params): ApiResponse
     {
         return $this->call('miniAppPay', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function query(array $params = []): Response
+    public function query(array $params = []): ApiResponse
     {
         return $this->call('query', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function refund(array $params = []): Response
+    public function refund(array $params = []): ApiResponse
     {
         return $this->call('refund', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function queryRefundOrder(array $params = []): Response
+    public function queryRefundOrder(array $params = []): ApiResponse
     {
         return $this->call('queryRefundOrder', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function cancelOrder(array $params = []): Response
+    public function cancelOrder(array $params = []): ApiResponse
     {
         return $this->call('cancelOrder', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function profitOrder(array $params): Response
+    public function profitOrder(array $params): ApiResponse
     {
         return $this->call('profitOrder', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function profitOrderBack(array $params): Response
+    public function profitOrderBack(array $params): ApiResponse
     {
         return $this->call('profitOrderBack', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function searchMerchantWxAppMsg(array $params = []): Response
+    public function searchMerchantWxAppMsg(array $params = []): ApiResponse
     {
         return $this->call('searchMerchantWxAppMsg', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function setMerchantWxAppMsg(array $params): Response
+    public function setMerchantWxAppMsg(array $params): ApiResponse
     {
         return $this->call('setMerchantWxAppMsg', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function getOpenidByAuthCode(array $params): Response
+    public function getOpenidByAuthCode(array $params): ApiResponse
     {
         return $this->call('getOpenidByAuthCode', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function userCancelOrder(array $params): Response
+    public function userCancelOrder(array $params): ApiResponse
     {
         return $this->call('userCancelOrder', $params);
     }
 
     /** @param array<string, mixed> $params */
-    public function getUnionOpenid(array $params): Response
+    public function getUnionOpenid(array $params): ApiResponse
     {
         return $this->call('getUnionOpenid', $params);
     }
@@ -161,9 +169,9 @@ final class CongmingPayClient
      *
      * @param array<string, mixed> $params
      */
-    public function request(string $path, array $params = []): Response
+    public function request(string $path, array $params = []): ApiResponse
     {
-        return $this->send($path, $params);
+        return $this->sendJson($path, $params);
     }
 
     /** @param array<string, mixed> $params */
@@ -179,7 +187,7 @@ final class CongmingPayClient
     }
 
     /** @param array<string, mixed> $params */
-    private function call(string $name, array $params): Response
+    private function call(string $name, array $params): ApiResponse
     {
         if (!isset(self::ENDPOINTS[$name])) {
             throw new InvalidArgumentException(sprintf('Unknown API method "%s".', $name));
@@ -187,15 +195,59 @@ final class CongmingPayClient
 
         $this->assertRequired($params, self::REQUIRED[$name] ?? []);
 
-        return $this->send(self::ENDPOINTS[$name], $params);
+        $this->logger->info('Calling CongmingPay API.', [
+            'api' => $name,
+            'endpoint' => self::ENDPOINTS[$name],
+        ]);
+
+        return $this->sendJson(self::ENDPOINTS[$name], $params);
     }
 
     /** @param array<string, mixed> $params */
-    private function send(string $path, array $params): Response
+    private function sendJson(string $path, array $params): ApiResponse
     {
         $url = $this->config->getBaseUri() . '/' . ltrim($path, '/');
+        $payload = $this->signedPayload($params);
+        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($body === false) {
+            throw new InvalidResponseException('Failed to encode request payload: ' . json_last_error_msg());
+        }
 
-        return $this->httpClient->postJson($url, $this->signedPayload($params));
+        $request = new Request('POST', $url, [
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ], $body);
+
+        $response = $this->httpClient->sendRequest($request);
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+            $this->logger->warning('CongmingPay API returned non-success HTTP status.', [
+                'endpoint' => $path,
+                'status_code' => $response->getStatusCode(),
+            ]);
+            throw new HttpException(sprintf('Unexpected HTTP status code %d: %s', $response->getStatusCode(), (string) $response->getBody()));
+        }
+
+        return new ApiResponse($response, $this->decodeJson($response));
+    }
+
+    /** @return array<string, mixed>|null */
+    private function decodeJson(ResponseInterface $response): ?array
+    {
+        $raw = (string) $response->getBody();
+        if ($raw === '') {
+            return null;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->logger->warning('CongmingPay API response is not valid JSON.', [
+                'json_error' => json_last_error_msg(),
+            ]);
+
+            return null;
+        }
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**

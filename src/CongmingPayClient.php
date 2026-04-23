@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace CongmingPay;
 
-use CongmingPay\Http\CurlHttpClient;
-use CongmingPay\Http\Request;
 use CongmingPay\Exception\HttpException;
 use CongmingPay\Exception\InvalidResponseException;
+use CongmingPay\Http\CurlHttpClient;
+use CongmingPay\Http\Request;
 use CongmingPay\Support\Signer;
 use InvalidArgumentException;
 use Psr\Http\Client\ClientInterface;

@@ -11,6 +11,10 @@ use Psr\Http\Message\UriInterface;
 
 final class Request implements RequestInterface
 {
+    private const METHOD_PATTERN = '/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/';
+
+    private const HEADER_NAME_PATTERN = '/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/';
+
     private string $method;
     private UriInterface $uri;
     private string $requestTarget = '';
@@ -30,12 +34,16 @@ final class Request implements RequestInterface
      */
     public function __construct(string $method, $uri, array $headers = [], string $body = '')
     {
-        $this->method = strtoupper($method);
+        $this->method = $this->normalizeMethod($method);
         $this->uri = $uri instanceof UriInterface ? $uri : new Uri((string) $uri);
         $this->body = new Stream($body);
 
         foreach ($headers as $name => $value) {
             $this->setHeader($name, $value);
+        }
+
+        if ($this->uri->getHost() !== '' && !$this->hasHeader('Host')) {
+            $this->setHeader('Host', $this->uri->getHost());
         }
     }
 
@@ -76,7 +84,7 @@ final class Request implements RequestInterface
     public function withMethod($method): self
     {
         $new = clone $this;
-        $new->method = strtoupper((string) $method);
+        $new->method = $new->normalizeMethod((string) $method);
 
         return $new;
     }
@@ -194,9 +202,7 @@ final class Request implements RequestInterface
     /** @param string|string[] $value */
     private function setHeader(string $name, $value): void
     {
-        if ($name === '') {
-            throw new InvalidArgumentException('Header name cannot be empty.');
-        }
+        $this->assertHeaderName($name);
 
         $this->removeHeader($name);
         $this->headers[$name] = $this->normalizeHeaderValue($value);
@@ -223,7 +229,29 @@ final class Request implements RequestInterface
         $values = is_array($value) ? $value : [$value];
 
         return array_map(static function ($item): string {
-            return (string) $item;
+            $item = (string) $item;
+            if (preg_match("/[\r\n]/", $item) === 1) {
+                throw new InvalidArgumentException('Header values cannot contain CR or LF characters.');
+            }
+
+            return $item;
         }, $values);
+    }
+
+    private function normalizeMethod(string $method): string
+    {
+        $method = strtoupper($method);
+        if ($method === '' || preg_match(self::METHOD_PATTERN, $method) !== 1) {
+            throw new InvalidArgumentException('HTTP method must be a valid token.');
+        }
+
+        return $method;
+    }
+
+    private function assertHeaderName(string $name): void
+    {
+        if ($name === '' || preg_match(self::HEADER_NAME_PATTERN, $name) !== 1) {
+            throw new InvalidArgumentException('Header name must be a valid token.');
+        }
     }
 }

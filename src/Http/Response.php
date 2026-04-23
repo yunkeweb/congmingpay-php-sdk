@@ -10,6 +10,8 @@ use Psr\Http\Message\StreamInterface;
 
 final class Response implements ResponseInterface
 {
+    private const HEADER_NAME_PATTERN = '/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/';
+
     private string $protocolVersion;
 
     private int $statusCode;
@@ -156,9 +158,7 @@ final class Response implements ResponseInterface
     /** @param string|string[] $value */
     private function setHeader(string $name, $value): void
     {
-        if ($name === '') {
-            throw new InvalidArgumentException('Header name cannot be empty.');
-        }
+        $this->assertHeaderName($name);
 
         $this->removeHeader($name);
         $this->headers[$name] = $this->normalizeHeaderValue($value);
@@ -185,7 +185,19 @@ final class Response implements ResponseInterface
         $values = is_array($value) ? $value : [$value];
 
         return array_map(static function ($item): string {
-            return (string) $item;
+            $item = (string) $item;
+            if (preg_match("/[\r\n]/", $item) === 1) {
+                throw new InvalidArgumentException('Header values cannot contain CR or LF characters.');
+            }
+
+            return $item;
         }, $values);
+    }
+
+    private function assertHeaderName(string $name): void
+    {
+        if ($name === '' || preg_match(self::HEADER_NAME_PATTERN, $name) !== 1) {
+            throw new InvalidArgumentException('Header name must be a valid token.');
+        }
     }
 }

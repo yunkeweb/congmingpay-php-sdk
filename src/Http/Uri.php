@@ -141,7 +141,7 @@ final class Uri implements UriInterface
         $new = clone $this;
         $new->userInfo = (string) $user;
         if ($password !== null) {
-            $new->userInfo .= ':' . (string) $password;
+            $new->userInfo .= ':' . $password;
         }
 
         return $new;
@@ -165,7 +165,7 @@ final class Uri implements UriInterface
         if ($port === '') {
             throw new InvalidArgumentException('Invalid URI port.');
         }
-        if (is_string($port) && $port !== '' && ctype_digit($port)) {
+        if (is_string($port) && ctype_digit($port)) {
             $port = (int) $port;
         }
 

@@ -45,7 +45,7 @@ expect_true($verifier->verifyPayment($callbackPayload) === true, 'Callback verif
 
 $http = new class implements HttpClientInterface {
     /** @var array<string, mixed> */
-    public $payload = [];
+    public array $payload = [];
 
     public function postJson(string $url, array $payload, array $headers = []): Response
     {

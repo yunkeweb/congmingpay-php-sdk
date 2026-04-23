@@ -10,8 +10,7 @@ use CongmingPay\Exception\InvalidResponseException;
 
 final class CurlHttpClient implements HttpClientInterface
 {
-    /** @var Config */
-    private $config;
+    private Config $config;
 
     public function __construct(Config $config)
     {

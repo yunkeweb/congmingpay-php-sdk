@@ -50,11 +50,9 @@ final class CongmingPayClient
         'getUnionOpenid' => ['code', 'payment_app'],
     ];
 
-    /** @var Config */
-    private $config;
+    private Config $config;
 
-    /** @var HttpClientInterface */
-    private $httpClient;
+    private HttpClientInterface $httpClient;
 
     public function __construct(Config $config, ?HttpClientInterface $httpClient = null)
     {

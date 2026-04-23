@@ -8,23 +8,17 @@ use InvalidArgumentException;
 
 final class Config
 {
-    /** @var string */
-    private $baseUri;
+    private string $baseUri;
 
-    /** @var string */
-    private $programId;
+    private string $programId;
 
-    /** @var string */
-    private $shopId;
+    private string $shopId;
 
-    /** @var string */
-    private $secretKey;
+    private string $secretKey;
 
-    /** @var int */
-    private $timeout;
+    private int $timeout;
 
-    /** @var bool */
-    private $verifySsl;
+    private bool $verifySsl;
 
     public function __construct(string $baseUri, string $programId, string $shopId, string $secretKey, int $timeout = 30, bool $verifySsl = true)
     {

@@ -8,8 +8,7 @@ use CongmingPay\Support\Signer;
 
 final class CallbackVerifier
 {
-    /** @var string */
-    private $secretKey;
+    private string $secretKey;
 
     public function __construct(string $secretKey)
     {

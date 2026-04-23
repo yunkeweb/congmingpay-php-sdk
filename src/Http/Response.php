@@ -6,17 +6,15 @@ namespace CongmingPay\Http;
 
 final class Response
 {
-    /** @var int */
-    private $statusCode;
+    private int $statusCode;
 
     /** @var array<string, string> */
-    private $headers;
+    private array $headers;
 
-    /** @var string */
-    private $body;
+    private string $body;
 
     /** @var array<string, mixed>|null */
-    private $json;
+    private ?array $json;
 
     /**
      * @param array<string, string> $headers

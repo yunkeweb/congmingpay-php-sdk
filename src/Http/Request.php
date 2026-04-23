@@ -5,44 +5,96 @@ declare(strict_types=1);
 namespace CongmingPay\Http;
 
 use InvalidArgumentException;
-use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\UriInterface;
 
-final class Response implements ResponseInterface
+final class Request implements RequestInterface
 {
-    private string $protocolVersion;
-
-    private int $statusCode;
-
-    private string $reasonPhrase;
+    private string $method;
+    private UriInterface $uri;
+    private string $requestTarget = '';
+    private string $protocolVersion = '1.1';
 
     /** @var array<string, string[]> */
-    private array $headers;
+    private array $headers = [];
 
     /** @var array<string, string> */
-    private array $headerNames;
+    private array $headerNames = [];
 
     private StreamInterface $body;
 
-    /** @var array<string, mixed>|null */
-    private ?array $json;
-
     /**
+     * @param string|UriInterface $uri
      * @param array<string, string|string[]> $headers
-     * @param array<string, mixed>|null $json
      */
-    public function __construct(int $statusCode, array $headers, string $body, ?array $json, string $reasonPhrase = '', string $protocolVersion = '1.1')
+    public function __construct(string $method, $uri, array $headers = [], string $body = '')
     {
-        $this->statusCode = $statusCode;
-        $this->reasonPhrase = $reasonPhrase;
-        $this->headers = [];
-        $this->headerNames = [];
+        $this->method = strtoupper($method);
+        $this->uri = $uri instanceof UriInterface ? $uri : new Uri((string) $uri);
+        $this->body = new Stream($body);
+
         foreach ($headers as $name => $value) {
             $this->setHeader($name, $value);
         }
-        $this->body = new Stream($body);
-        $this->json = $json;
-        $this->protocolVersion = $protocolVersion;
+    }
+
+    public function getRequestTarget(): string
+    {
+        if ($this->requestTarget !== '') {
+            return $this->requestTarget;
+        }
+
+        $target = $this->uri->getPath();
+        if ($target === '') {
+            $target = '/';
+        }
+        if ($this->uri->getQuery() !== '') {
+            $target .= '?' . $this->uri->getQuery();
+        }
+
+        return $target;
+    }
+
+    public function withRequestTarget($requestTarget): self
+    {
+        if (preg_match('/\s/', (string) $requestTarget) === 1) {
+            throw new InvalidArgumentException('Request target cannot contain whitespace.');
+        }
+
+        $new = clone $this;
+        $new->requestTarget = (string) $requestTarget;
+
+        return $new;
+    }
+
+    public function getMethod(): string
+    {
+        return $this->method;
+    }
+
+    public function withMethod($method): self
+    {
+        $new = clone $this;
+        $new->method = strtoupper((string) $method);
+
+        return $new;
+    }
+
+    public function getUri(): UriInterface
+    {
+        return $this->uri;
+    }
+
+    public function withUri(UriInterface $uri, $preserveHost = false): self
+    {
+        $new = clone $this;
+        $new->uri = $uri;
+        if (!$preserveHost && $uri->getHost() !== '') {
+            $new = $new->withHeader('Host', $uri->getHost());
+        }
+
+        return $new;
     }
 
     public function getProtocolVersion(): string
@@ -56,30 +108,6 @@ final class Response implements ResponseInterface
         $new->protocolVersion = (string) $version;
 
         return $new;
-    }
-
-    public function getStatusCode(): int
-    {
-        return $this->statusCode;
-    }
-
-    public function withStatus($code, $reasonPhrase = ''): self
-    {
-        $code = (int) $code;
-        if ($code < 100 || $code > 599) {
-            throw new InvalidArgumentException('HTTP status code must be between 100 and 599.');
-        }
-
-        $new = clone $this;
-        $new->statusCode = $code;
-        $new->reasonPhrase = (string) $reasonPhrase;
-
-        return $new;
-    }
-
-    public function getReasonPhrase(): string
-    {
-        return $this->reasonPhrase;
     }
 
     /** @return array<string, string[]> */
@@ -156,28 +184,6 @@ final class Response implements ResponseInterface
         $new->body = $body;
 
         return $new;
-    }
-
-    public function getRawBody(): string
-    {
-        return (string) $this->body;
-    }
-
-    /** @return array<string, mixed>|null */
-    public function getJson(): ?array
-    {
-        return $this->json;
-    }
-
-    /** @return array<string, mixed> */
-    public function toArray(): array
-    {
-        return $this->json ?? [];
-    }
-
-    public function isSuccess(): bool
-    {
-        return isset($this->json['result_code']) && strtolower((string) $this->json['result_code']) === 'success';
     }
 
     /** @param string|string[] $value */

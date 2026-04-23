@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CongmingPay\Exception;
 
-class HttpException extends CongmingPayException
+use Psr\Http\Client\ClientExceptionInterface;
+
+class HttpException extends CongmingPayException implements ClientExceptionInterface
 {
 }

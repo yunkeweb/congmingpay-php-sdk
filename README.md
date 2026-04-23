@@ -49,6 +49,27 @@ $data = $response->toArray();
 
 The client automatically adds `program_id`, `shop_id`, and `sign`. Request signing follows the document rule: sort request keys, join as `key=value`, append `key=secret`, then uppercase MD5.
 
+Responses implement PSR-7 `Psr\Http\Message\ResponseInterface`.
+Requests use PSR-7 `Psr\Http\Message\RequestInterface`, and the bundled cURL client implements PSR-18 `Psr\Http\Client\ClientInterface`.
+
+```php
+$statusCode = $response->getStatusCode();
+$contentType = $response->getHeaderLine('content-type');
+$rawBody = (string) $response->getBody(); // PSR-7 stream
+$rawBody = $response->getRawBody();       // convenience alias
+$data = $response->toArray();             // decoded JSON payload
+```
+
+```php
+use CongmingPay\Http\Request;
+
+$psrRequest = new Request('POST', 'https://merchant.example.com/api', [
+    'Content-Type' => 'application/json',
+], '{"foo":"bar"}');
+
+$psrResponse = $httpClient->sendRequest($psrRequest);
+```
+
 ## Wrapped APIs
 
 | Method | Endpoint |

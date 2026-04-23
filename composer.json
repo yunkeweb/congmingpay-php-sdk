@@ -6,7 +6,9 @@
   "require": {
     "php": ">=7.4",
     "ext-curl": "*",
-    "ext-json": "*"
+    "ext-json": "*",
+    "psr/http-client": "^1.0",
+    "psr/http-message": "^1.1 || ^2.0"
   },
   "autoload": {
     "psr-4": {

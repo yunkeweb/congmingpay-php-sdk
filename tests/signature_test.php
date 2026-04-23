@@ -2,19 +2,18 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../src/Support/Signer.php';
-require __DIR__ . '/../src/CallbackVerifier.php';
-require __DIR__ . '/../src/Config.php';
-require __DIR__ . '/../src/Http/Response.php';
-require __DIR__ . '/../src/Http/HttpClientInterface.php';
-require __DIR__ . '/../src/CongmingPayClient.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 use CongmingPay\CallbackVerifier;
 use CongmingPay\Config;
 use CongmingPay\CongmingPayClient;
 use CongmingPay\Http\HttpClientInterface;
+use CongmingPay\Http\Request;
 use CongmingPay\Http\Response;
 use CongmingPay\Support\Signer;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 function expect_true(bool $condition, string $message): void
 {
@@ -53,6 +52,11 @@ $http = new class implements HttpClientInterface {
 
         return new Response(200, [], '{"result_code":"success"}', ['result_code' => 'success']);
     }
+
+    public function sendRequest(RequestInterface $request): ResponseInterface
+    {
+        return new Response(200, [], '{"result_code":"success"}', ['result_code' => 'success']);
+    }
 };
 
 $client = new CongmingPayClient(new Config('https://pay.example.com', 'pid', 'sid', 'secret'), $http);
@@ -61,5 +65,16 @@ $client->query(['order_id' => 'OID']);
 expect_true($http->payload['program_id'] === 'pid', 'program_id was not injected.');
 expect_true($http->payload['shop_id'] === 'sid', 'shop_id was not injected.');
 expect_true(isset($http->payload['sign']), 'sign was not injected.');
+
+$response = new Response(200, ['Content-Type' => 'application/json'], '{"result_code":"success"}', ['result_code' => 'success']);
+expect_true($response instanceof ResponseInterface, 'Response does not implement PSR-7 ResponseInterface.');
+expect_true($response->getHeaderLine('content-type') === 'application/json', 'Header lookup is not PSR-7 compatible.');
+expect_true((string) $response->getBody() === '{"result_code":"success"}', 'Body stream does not expose response body.');
+
+$request = new Request('POST', 'https://pay.example.com/api/query.do', ['Content-Type' => 'application/json'], '{"foo":"bar"}');
+expect_true($request instanceof RequestInterface, 'Request does not implement PSR-7 RequestInterface.');
+expect_true($http instanceof ClientInterface, 'HTTP client does not implement PSR-18 ClientInterface.');
+expect_true($request->getMethod() === 'POST', 'Request method mismatch.');
+expect_true($request->getHeaderLine('content-type') === 'application/json', 'Request header lookup is not PSR-7 compatible.');
 
 echo "OK\n";

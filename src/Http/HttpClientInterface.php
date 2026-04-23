@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace CongmingPay\Http;
 
-interface HttpClientInterface
+use Psr\Http\Client\ClientInterface;
+
+interface HttpClientInterface extends ClientInterface
 {
     /**
      * @param array<string, mixed> $payload

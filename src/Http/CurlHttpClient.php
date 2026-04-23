@@ -7,6 +7,8 @@ namespace CongmingPay\Http;
 use CongmingPay\Config;
 use CongmingPay\Exception\HttpException;
 use CongmingPay\Exception\InvalidResponseException;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 final class CurlHttpClient implements HttpClientInterface
 {
@@ -24,31 +26,52 @@ final class CurlHttpClient implements HttpClientInterface
             throw new InvalidResponseException('Failed to encode request payload: ' . json_last_error_msg());
         }
 
+        $request = new Request('POST', $url, array_merge([
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ], $headers), $body);
+        $response = $this->sendRequest($request);
+        if (!$response instanceof Response) {
+            throw new InvalidResponseException('Unexpected response implementation.');
+        }
+
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+            throw new HttpException(sprintf('Unexpected HTTP status code %d: %s', $response->getStatusCode(), $response->getRawBody()));
+        }
+
+        return $response;
+    }
+
+    public function sendRequest(RequestInterface $request): ResponseInterface
+    {
         $responseHeaders = [];
-        $curl = curl_init($url);
+        $reasonPhrase = '';
+        $curl = curl_init((string) $request->getUri());
         if ($curl === false) {
             throw new HttpException('Failed to initialize curl.');
         }
 
-        $requestHeaders = array_merge([
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-        ], $headers);
-
         curl_setopt_array($curl, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_CUSTOMREQUEST => $request->getMethod(),
+            CURLOPT_POSTFIELDS => (string) $request->getBody(),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => $this->config->getTimeout(),
             CURLOPT_CONNECTTIMEOUT => $this->config->getTimeout(),
             CURLOPT_SSL_VERIFYPEER => $this->config->shouldVerifySsl(),
             CURLOPT_SSL_VERIFYHOST => $this->config->shouldVerifySsl() ? 2 : 0,
-            CURLOPT_HTTPHEADER => $this->formatHeaders($requestHeaders),
-            CURLOPT_HEADERFUNCTION => static function ($curl, string $header) use (&$responseHeaders): int {
+            CURLOPT_HTTPHEADER => $this->formatHeaders($request->getHeaders()),
+            CURLOPT_HEADERFUNCTION => static function ($curl, string $header) use (&$responseHeaders, &$reasonPhrase): int {
                 $length = strlen($header);
+                if (preg_match('/^HTTP\/\S+\s+\d{3}\s*(.*)$/', trim($header), $matches) === 1) {
+                    $reasonPhrase = $matches[1] ?? '';
+
+                    return $length;
+                }
+
                 $parts = explode(':', $header, 2);
                 if (count($parts) === 2) {
-                    $responseHeaders[strtolower(trim($parts[0]))] = trim($parts[1]);
+                    $name = trim($parts[0]);
+                    $responseHeaders[$name][] = trim($parts[1]);
                 }
 
                 return $length;
@@ -66,16 +89,12 @@ final class CurlHttpClient implements HttpClientInterface
         $statusCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
         curl_close($curl);
 
-        if ($statusCode < 200 || $statusCode >= 300) {
-            throw new HttpException(sprintf('Unexpected HTTP status code %d: %s', $statusCode, (string) $raw));
-        }
-
         $json = json_decode((string) $raw, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             $json = null;
         }
 
-        return new Response($statusCode, $responseHeaders, (string) $raw, is_array($json) ? $json : null);
+        return new Response($statusCode, $responseHeaders, (string) $raw, is_array($json) ? $json : null, $reasonPhrase);
     }
 
     /**
@@ -86,7 +105,9 @@ final class CurlHttpClient implements HttpClientInterface
     {
         $formatted = [];
         foreach ($headers as $name => $value) {
-            $formatted[] = $name . ': ' . $value;
+            foreach ((array) $value as $item) {
+                $formatted[] = $name . ': ' . $item;
+            }
         }
 
         return $formatted;

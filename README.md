@@ -110,24 +110,24 @@ $psrResponse = $httpClient->sendRequest($psrRequest);
 
 ## Wrapped APIs
 
-| Method | Endpoint |
-| --- | --- |
-| `buyPay()` | `/api/buyPay.do` |
-| `jsNativePay()` | `/api/jsNativePay.do` |
-| `microPay()` | `/api/microPay.do` |
-| `prePay()` | `/api/v3/vprePay.do` |
-| `miniAppPay()` | `/api/miniAppPay.do` |
-| `query()` | `/api/query.do` |
-| `refund()` | `/api/refund.do` |
-| `queryRefundOrder()` | `/api/queryRefundOrder.do` |
-| `cancelOrder()` | `/api/cancelOrder.do` |
-| `profitOrder()` | `/api/profitorder.do` |
-| `profitOrderBack()` | `/api/profitorderback.do` |
-| `searchMerchantWxAppMsg()` | `/api/searchMerchantWxAppMsg.do` |
-| `setMerchantWxAppMsg()` | `/api/setMerchantWxAppMsg.do` |
-| `getOpenidByAuthCode()` | `/api/getOpenidByAuthCode.do` |
-| `userCancelOrder()` | `/api/userCancelOrder.do` |
-| `getUnionOpenid()` | `/api/getUnionOpenid.do` |
+| Method | Endpoint | 中文说明（飞书文档章节） |
+| --- | --- | --- |
+| `buyPay()` | `/api/buyPay.do` | 公众号支付接口（非原生，2-1） |
+| `jsNativePay()` | `/api/jsNativePay.do` | 统一下单接口（2-2） |
+| `microPay()` | `/api/microPay.do` | 条码支付接口（2-3） |
+| `prePay()` | `/api/v3/vprePay.do` | 预支付接口（2-4） |
+| `miniAppPay()` | `/api/miniAppPay.do` | 小程序支付接口（2-5） |
+| `query()` | `/api/query.do` | 支付查询接口（2-6） |
+| `refund()` | `/api/refund.do` | 退款接口（2-7） |
+| `queryRefundOrder()` | `/api/queryRefundOrder.do` | 退款查询接口（2-8） |
+| `cancelOrder()` | `/api/cancelOrder.do` | 撤销或关闭订单接口（2-9） |
+| `profitOrder()` | `/api/profitorder.do` | 延迟分账及预授权完成接口（2-11） |
+| `profitOrderBack()` | `/api/profitorderback.do` | 分账退回接口（2-12） |
+| `searchMerchantWxAppMsg()` | `/api/searchMerchantWxAppMsg.do` | 查询用户微信配置 appid 及授权目录（2-14） |
+| `setMerchantWxAppMsg()` | `/api/setMerchantWxAppMsg.do` | 用户配置微信 appid 及授权目录（2-15） |
+| `getOpenidByAuthCode()` | `/api/getOpenidByAuthCode.do` | 授权码获取用户 openid（2-16） |
+| `userCancelOrder()` | `/api/userCancelOrder.do` | 用户取消支付接口（2-17） |
+| `getUnionOpenid()` | `/api/getUnionOpenid.do` | 授权银联用户标识接口（2-18） |
 
 For an unwrapped endpoint:
 

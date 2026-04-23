@@ -128,7 +128,6 @@ $configWithDefaults = new Config(
     true,
     [
         'notify_url' => 'https://merchant.example.com/default-notify',
-        'ver' => '3.0',
     ],
     [
         'buyPay' => [
@@ -145,7 +144,9 @@ $clientWithDefaults->buyPay([
 $payloadWithDefaults = json_decode((string) $httpDefaults->request->getBody(), true);
 expect_true(is_array($payloadWithDefaults), 'Request payload with defaults is not JSON.');
 expect_true($payloadWithDefaults['notify_url'] === 'https://merchant.example.com/default-notify', 'Default notify_url was not applied.');
-expect_true($payloadWithDefaults['ver'] === '3.0', 'Default ver was not applied.');
+expect_true($payloadWithDefaults['ver'] === '3.0', 'System default ver was not applied.');
+expect_true($payloadWithDefaults['profit_share_type'] === '0', 'System default profit_share_type was not applied.');
+expect_true($payloadWithDefaults['is_notify_new'] === '0', 'System default is_notify_new was not applied.');
 expect_true($payloadWithDefaults['device'] === 'DEFAULT_DEVICE', 'Endpoint default device was not applied.');
 expect_true($payloadWithDefaults['order_type'] === 'weixin', 'Endpoint default order_type was not applied.');
 
@@ -159,5 +160,16 @@ $payloadOverrideDefaults = json_decode((string) $httpDefaults->request->getBody(
 expect_true(is_array($payloadOverrideDefaults), 'Request payload with overrides is not JSON.');
 expect_true($payloadOverrideDefaults['notify_url'] === 'https://merchant.example.com/override-notify', 'Per-request notify_url should override defaults.');
 expect_true($payloadOverrideDefaults['device'] === 'OVERRIDE_DEVICE', 'Per-request device should override defaults.');
+expect_true($payloadOverrideDefaults['is_notify_new'] === '0', 'System default is_notify_new should remain when not overridden.');
+
+$clientWithDefaults->prePay([
+    'money' => '3.00',
+    'order_id' => 'OID_PREPAY',
+    'notify_url' => 'https://merchant.example.com/prepay-notify',
+]);
+$payloadPrePay = json_decode((string) $httpDefaults->request->getBody(), true);
+expect_true(is_array($payloadPrePay), 'Prepay payload is not JSON.');
+expect_true($payloadPrePay['version'] === '3.0', 'System default version for prePay was not applied.');
+expect_true($payloadPrePay['profit_share_type'] === '0', 'System default profit_share_type for prePay was not applied.');
 
 echo "OK\n";

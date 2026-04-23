@@ -17,6 +17,35 @@ use Psr\Log\NullLogger;
 
 final class CongmingPayClient
 {
+    /** @var array<string, mixed> */
+    private const SYSTEM_DEFAULTS = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private const SYSTEM_ENDPOINT_DEFAULTS = [
+        'buyPay' => [
+            'ver' => '3.0',
+            'profit_share_type' => '0',
+            'is_notify_new' => '0',
+        ],
+        'jsNativePay' => [
+            'profit_share_type' => '0',
+            'is_notify_new' => '0',
+        ],
+        'microPay' => [
+            'profit_share_type' => '0',
+            'is_notify_new' => '0',
+        ],
+        'prePay' => [
+            'version' => '3.0',
+            'profit_share_type' => '0',
+        ],
+        'miniAppPay' => [
+            'ver' => '3.0',
+            'profit_share_type' => '0',
+            'is_notify_new' => '0',
+        ],
+    ];
+
     private const ENDPOINTS = [
         'buyPay' => '/api/buyPay.do',
         'jsNativePay' => '/api/jsNativePay.do',
@@ -178,6 +207,8 @@ final class CongmingPayClient
     public function signedPayload(array $params, ?string $endpointKey = null): array
     {
         $payload = array_merge(
+            self::SYSTEM_DEFAULTS,
+            $endpointKey === null ? [] : $this->getSystemEndpointDefaults($endpointKey),
             $this->config->getDefaultParams(),
             $endpointKey === null ? [] : $this->config->getEndpointDefaults($endpointKey),
             $params
@@ -256,6 +287,16 @@ final class CongmingPayClient
         }
 
         return is_array($decoded) ? $decoded : null;
+    }
+
+    /** @return array<string, mixed> */
+    private function getSystemEndpointDefaults(string $endpointKey): array
+    {
+        if (!isset(self::SYSTEM_ENDPOINT_DEFAULTS[$endpointKey])) {
+            return [];
+        }
+
+        return self::SYSTEM_ENDPOINT_DEFAULTS[$endpointKey];
     }
 
     /**

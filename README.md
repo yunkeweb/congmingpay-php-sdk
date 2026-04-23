@@ -66,7 +66,16 @@ $response = $client->buyPay([
 $data = $response->toArray();
 ```
 
-The client automatically adds `shop_id` and `sign`. If `program_id` is configured, it is also added. Parameters are merged in this order: global defaults -> endpoint defaults -> per-request params. Per-request params override defaults.
+The client automatically adds `shop_id` and `sign`. If `program_id` is configured, it is also added.
+Parameters are merged in this order: system defaults -> global defaults -> endpoint defaults -> per-request params. Per-request params override all defaults.
+Current system defaults:
+
+- `buyPay`: `ver=3.0`, `profit_share_type=0`, `is_notify_new=0`
+- `jsNativePay`: `profit_share_type=0`, `is_notify_new=0`
+- `microPay`: `profit_share_type=0`, `is_notify_new=0`
+- `prePay`: `version=3.0`, `profit_share_type=0`
+- `miniAppPay`: `ver=3.0`, `profit_share_type=0`, `is_notify_new=0`
+
 Request signing follows the document rule: sort request keys, join as `key=value`, append `key=secret`, then uppercase MD5.
 If no logger is provided, the SDK uses PSR-3 `NullLogger`.
 

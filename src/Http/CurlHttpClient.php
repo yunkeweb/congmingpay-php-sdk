@@ -65,7 +65,11 @@ final class CurlHttpClient implements ClientInterface
             },
         ];
 
-        $requestBody = (string) $request->getBody();
+        $body = $request->getBody();
+        if ($body->isSeekable()) {
+            $body->rewind();
+        }
+        $requestBody = (string) $body;
         if ($requestBody !== '') {
             $options[CURLOPT_POSTFIELDS] = $requestBody;
         }

@@ -90,7 +90,12 @@ final class Request implements RequestInterface
     {
         $new = clone $this;
         $new->uri = $uri;
-        if (!$preserveHost && $uri->getHost() !== '') {
+
+        if ($uri->getHost() === '') {
+            return $new;
+        }
+
+        if (!$preserveHost || !$new->hasHeader('Host')) {
             $new = $new->withHeader('Host', $uri->getHost());
         }
 
@@ -134,7 +139,7 @@ final class Request implements RequestInterface
 
     public function getHeaderLine($name): string
     {
-        return implode(',', $this->getHeader($name));
+        return implode(', ', $this->getHeader($name));
     }
 
     public function withHeader($name, $value): self
@@ -193,6 +198,7 @@ final class Request implements RequestInterface
             throw new InvalidArgumentException('Header name cannot be empty.');
         }
 
+        $this->removeHeader($name);
         $this->headers[$name] = $this->normalizeHeaderValue($value);
         $this->headerNames[strtolower($name)] = $name;
     }

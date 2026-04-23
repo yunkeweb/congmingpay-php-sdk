@@ -101,7 +101,7 @@ final class Response implements ResponseInterface
 
     public function getHeaderLine($name): string
     {
-        return implode(',', $this->getHeader($name));
+        return implode(', ', $this->getHeader($name));
     }
 
     public function withHeader($name, $value): self
@@ -160,6 +160,7 @@ final class Response implements ResponseInterface
             throw new InvalidArgumentException('Header name cannot be empty.');
         }
 
+        $this->removeHeader($name);
         $this->headers[$name] = $this->normalizeHeaderValue($value);
         $this->headerNames[strtolower($name)] = $name;
     }

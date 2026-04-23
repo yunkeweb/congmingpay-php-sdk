@@ -125,8 +125,13 @@ final class Uri implements UriInterface
 
     public function withScheme($scheme): self
     {
+        $scheme = (string) $scheme;
+        if ($scheme !== '' && preg_match('/^[A-Za-z][A-Za-z0-9+\-.]*$/', $scheme) !== 1) {
+            throw new InvalidArgumentException('Invalid URI scheme.');
+        }
+
         $new = clone $this;
-        $new->scheme = strtolower((string) $scheme);
+        $new->scheme = strtolower($scheme);
 
         return $new;
     }
@@ -144,20 +149,35 @@ final class Uri implements UriInterface
 
     public function withHost($host): self
     {
+        $host = (string) $host;
+        if (preg_match('/[\s\/?#@:]/', $host) === 1) {
+            throw new InvalidArgumentException('Invalid URI host.');
+        }
+
         $new = clone $this;
-        $new->host = strtolower((string) $host);
+        $new->host = strtolower($host);
 
         return $new;
     }
 
     public function withPort($port): self
     {
+        if ($port === '') {
+            throw new InvalidArgumentException('Invalid URI port.');
+        }
+        if (is_string($port) && $port !== '' && ctype_digit($port)) {
+            $port = (int) $port;
+        }
+
+        if ($port !== null && !is_int($port)) {
+            throw new InvalidArgumentException('Invalid URI port.');
+        }
         if ($port !== null && ($port < 1 || $port > 65535)) {
             throw new InvalidArgumentException('Invalid URI port.');
         }
 
         $new = clone $this;
-        $new->port = $port === null ? null : (int) $port;
+        $new->port = $port;
 
         return $new;
     }

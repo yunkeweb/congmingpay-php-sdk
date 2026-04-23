@@ -84,11 +84,13 @@ $response = new Response(200, ['Content-Type' => 'application/json'], '{"result_
 expect_true($response instanceof ResponseInterface, 'Response does not implement PSR-7 ResponseInterface.');
 expect_true($response->getHeaderLine('content-type') === 'application/json', 'Header lookup is not PSR-7 compatible.');
 expect_true((string) $response->getBody() === '{"result_code":"success"}', 'Body stream does not expose response body.');
+expect_true($response->withAddedHeader('X-Test', 'a')->withAddedHeader('X-Test', 'b')->getHeaderLine('x-test') === 'a, b', 'Header line formatting is not PSR compatible.');
 
 $request = new Request('POST', 'https://pay.example.com/api/query.do', ['Content-Type' => 'application/json'], '{"foo":"bar"}');
 expect_true($request instanceof RequestInterface, 'Request does not implement PSR-7 RequestInterface.');
 expect_true($http instanceof ClientInterface, 'HTTP client does not implement PSR-18 ClientInterface.');
 expect_true($request->getMethod() === 'POST', 'Request method mismatch.');
 expect_true($request->getHeaderLine('content-type') === 'application/json', 'Request header lookup is not PSR-7 compatible.');
+expect_true($request->withUri(new CongmingPay\Http\Uri('https://other.example.com/path'))->getHeaderLine('host') === 'other.example.com', 'Request Host header was not updated from URI.');
 
 echo "OK\n";

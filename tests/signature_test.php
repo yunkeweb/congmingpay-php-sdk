@@ -93,4 +93,20 @@ expect_true($request->getMethod() === 'POST', 'Request method mismatch.');
 expect_true($request->getHeaderLine('content-type') === 'application/json', 'Request header lookup is not PSR-7 compatible.');
 expect_true($request->withUri(new CongmingPay\Http\Uri('https://other.example.com/path'))->getHeaderLine('host') === 'other.example.com', 'Request Host header was not updated from URI.');
 
+$httpWithoutProgramId = new class implements ClientInterface {
+    public ?RequestInterface $request = null;
+
+    public function sendRequest(RequestInterface $request): ResponseInterface
+    {
+        $this->request = $request;
+
+        return new Response(200, ['Content-Type' => 'application/json'], '{"result_code":"success"}', 'OK');
+    }
+};
+$clientWithoutProgramId = new CongmingPayClient(new Config('https://pay.example.com', null, 'sid', 'secret'), $httpWithoutProgramId);
+$clientWithoutProgramId->query(['order_id' => 'OID']);
+$payloadWithoutProgramId = json_decode((string) $httpWithoutProgramId->request->getBody(), true);
+expect_true(is_array($payloadWithoutProgramId), 'Request payload without program_id is not JSON.');
+expect_true(!array_key_exists('program_id', $payloadWithoutProgramId), 'program_id should not be injected when omitted.');
+
 echo "OK\n";

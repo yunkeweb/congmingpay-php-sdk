@@ -34,7 +34,7 @@ use Monolog\Logger;
 
 $config = new Config(
     'https://your-congmingpay-domain.com',
-    'your_program_id',
+    null, // optional program_id; pass your program id here when your merchant requires it
     'your_shop_id',
     'your_secret_key'
 );
@@ -58,7 +58,7 @@ $response = $client->buyPay([
 $data = $response->toArray();
 ```
 
-The client automatically adds `program_id`, `shop_id`, and `sign`. Request signing follows the document rule: sort request keys, join as `key=value`, append `key=secret`, then uppercase MD5.
+The client automatically adds `shop_id` and `sign`. If `program_id` is configured, it is also added. Request signing follows the document rule: sort request keys, join as `key=value`, append `key=secret`, then uppercase MD5.
 If no logger is provided, the SDK uses PSR-3 `NullLogger`.
 
 The SDK uses these PSR contracts:

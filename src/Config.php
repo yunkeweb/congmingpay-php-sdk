@@ -10,7 +10,7 @@ final class Config
 {
     private string $baseUri;
 
-    private string $programId;
+    private ?string $programId;
 
     private string $shopId;
 
@@ -20,18 +20,18 @@ final class Config
 
     private bool $verifySsl;
 
-    public function __construct(string $baseUri, string $programId, string $shopId, string $secretKey, int $timeout = 30, bool $verifySsl = true)
+    public function __construct(string $baseUri, ?string $programId, string $shopId, string $secretKey, int $timeout = 30, bool $verifySsl = true)
     {
         $baseUri = rtrim(trim($baseUri), '/');
         if ($baseUri === '') {
             throw new InvalidArgumentException('Config baseUri cannot be empty.');
         }
-        if ($programId === '' || $shopId === '' || $secretKey === '') {
-            throw new InvalidArgumentException('Config programId, shopId and secretKey cannot be empty.');
+        if ($shopId === '' || $secretKey === '') {
+            throw new InvalidArgumentException('Config shopId and secretKey cannot be empty.');
         }
 
         $this->baseUri = $baseUri;
-        $this->programId = $programId;
+        $this->programId = $programId === '' ? null : $programId;
         $this->shopId = $shopId;
         $this->secretKey = $secretKey;
         $this->timeout = $timeout;
@@ -43,7 +43,7 @@ final class Config
         return $this->baseUri;
     }
 
-    public function getProgramId(): string
+    public function getProgramId(): ?string
     {
         return $this->programId;
     }

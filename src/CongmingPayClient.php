@@ -178,9 +178,13 @@ final class CongmingPayClient
     public function signedPayload(array $params): array
     {
         $payload = array_merge([
-            'program_id' => $this->config->getProgramId(),
             'shop_id' => $this->config->getShopId(),
         ], $params);
+
+        if ($this->config->getProgramId() !== null && !array_key_exists('program_id', $payload)) {
+            $payload['program_id'] = $this->config->getProgramId();
+        }
+
         $payload['sign'] = Signer::sign($payload, $this->config->getSecretKey());
 
         return $payload;

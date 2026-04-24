@@ -39,8 +39,7 @@ final class Config
         bool $verifySsl = true,
         array $defaultParams = [],
         array $endpointDefaults = []
-    )
-    {
+    ) {
         $baseUri = rtrim(trim($baseUri), '/');
         if ($baseUri === '') {
             throw new InvalidArgumentException('Config baseUri cannot be empty.');

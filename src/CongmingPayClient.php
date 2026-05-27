@@ -67,7 +67,7 @@ final class CongmingPayClient
 
     private const REQUIRED = [
         'buyPay' => ['money', 'order_id', 'order_type', 'device', 'notify_url', 'ver'],
-        'jsNativePay' => ['order_id', 'money', 'order_type', 'device', 'openid', 'notify_url'],
+        'jsNativePay' => ['order_id', 'money', 'order_type', 'device', 'notify_url'],
         'microPay' => ['money', 'order_id', 'auth_code', 'device'],
         'prePay' => ['money', 'order_id', 'version', 'notify_url'],
         'miniAppPay' => ['money', 'order_id', 'order_type', 'device', 'appid', 'openid', 'notify_url', 'ver'],
@@ -82,6 +82,15 @@ final class CongmingPayClient
         'getOpenidByAuthCode' => ['auth_code'],
         'userCancelOrder' => ['error_msg'],
         'getUnionOpenid' => ['code', 'payment_app'],
+    ];
+
+    /** @var array<string, array<int, string[]>> */
+    private const REQUIRED_ONE_OF = [
+        'query' => [['order_id', 'out_trade_no', 'transaction_id']],
+        'refund' => [['order_id', 'shop_order_id']],
+        'queryRefundOrder' => [['refund_order_id', 'plat_refund_order_id']],
+        'cancelOrder' => [['order_id', 'out_trade_no']],
+        'userCancelOrder' => [['order_id', 'out_trade_no']],
     ];
 
     private Config $config;
@@ -234,6 +243,8 @@ final class CongmingPayClient
 
         $payload = $this->signedPayload($params, $name);
         $this->assertRequired($payload, self::REQUIRED[$name] ?? []);
+        $this->assertRequiredOneOf($payload, self::REQUIRED_ONE_OF[$name] ?? []);
+        $this->assertEndpointRules($name, $payload);
 
         $this->logger->info('Calling CongmingPay API.', [
             'api' => $name,
@@ -324,6 +335,41 @@ final class CongmingPayClient
             if (!array_key_exists($field, $params) || $params[$field] === null || $params[$field] === '') {
                 throw new InvalidArgumentException(sprintf('Missing required parameter "%s".', $field));
             }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param array<int, string[]> $groups
+     */
+    private function assertRequiredOneOf(array $params, array $groups): void
+    {
+        foreach ($groups as $group) {
+            foreach ($group as $field) {
+                if (array_key_exists($field, $params) && $params[$field] !== null && $params[$field] !== '') {
+                    continue 2;
+                }
+            }
+
+            throw new InvalidArgumentException(sprintf(
+                'One of these parameters is required: "%s".',
+                implode('", "', $group)
+            ));
+        }
+    }
+
+    /** @param array<string, mixed> $params */
+    private function assertEndpointRules(string $name, array $params): void
+    {
+        if ($name !== 'jsNativePay') {
+            return;
+        }
+
+        $isDouyinApp = ($params['order_type'] ?? null) === 'douyin'
+            && ($params['pay_type'] ?? null) === 'app';
+
+        if (!$isDouyinApp) {
+            $this->assertRequired($params, ['openid']);
         }
     }
 }

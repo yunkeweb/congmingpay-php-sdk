@@ -70,8 +70,8 @@ final class Stream implements StreamInterface
 
     public function tell(): int
     {
-        $this->assertAttached();
-        $position = ftell($this->resource);
+        $resource = $this->getAttached();
+        $position = ftell($resource);
         if ($position === false) {
             throw new RuntimeException('Unable to determine stream position.');
         }
@@ -97,8 +97,8 @@ final class Stream implements StreamInterface
 
     public function seek($offset, $whence = SEEK_SET): void
     {
-        $this->assertAttached();
-        if (!$this->isSeekable() || fseek($this->resource, $offset, $whence) !== 0) {
+        $resource = $this->getAttached();
+        if (!$this->isSeekable() || fseek($resource, $offset, $whence) !== 0) {
             throw new RuntimeException('Unable to seek stream.');
         }
     }
@@ -121,12 +121,12 @@ final class Stream implements StreamInterface
 
     public function write($string): int
     {
-        $this->assertAttached();
+        $resource = $this->getAttached();
         if (!$this->isWritable()) {
             throw new RuntimeException('Stream is not writable.');
         }
 
-        $written = fwrite($this->resource, $string);
+        $written = fwrite($resource, $string);
         if ($written === false) {
             throw new RuntimeException('Unable to write to stream.');
         }
@@ -147,12 +147,12 @@ final class Stream implements StreamInterface
 
     public function read($length): string
     {
-        $this->assertAttached();
+        $resource = $this->getAttached();
         if (!$this->isReadable()) {
             throw new RuntimeException('Stream is not readable.');
         }
 
-        $data = fread($this->resource, $length);
+        $data = fread($resource, $length);
         if ($data === false) {
             throw new RuntimeException('Unable to read from stream.');
         }
@@ -162,8 +162,8 @@ final class Stream implements StreamInterface
 
     public function getContents(): string
     {
-        $this->assertAttached();
-        $contents = stream_get_contents($this->resource);
+        $resource = $this->getAttached();
+        $contents = stream_get_contents($resource);
         if ($contents === false) {
             throw new RuntimeException('Unable to read stream contents.');
         }
@@ -182,10 +182,15 @@ final class Stream implements StreamInterface
         return $key === null ? $metadata : ($metadata[$key] ?? null);
     }
 
-    private function assertAttached(): void
+    /**
+     * @return resource
+     */
+    private function getAttached()
     {
         if ($this->resource === null) {
             throw new RuntimeException('Stream is detached.');
         }
+
+        return $this->resource;
     }
 }

@@ -22,6 +22,17 @@ function expectTrue(bool $condition, string $message): void
     }
 }
 
+function expectThrows(callable $callback, string $message): void
+{
+    try {
+        $callback();
+    } catch (Throwable $exception) {
+        return;
+    }
+
+    throw new RuntimeException($message);
+}
+
 $requestSign = Signer::sign([
     'country' => '中国',
     'sex' => '男',
@@ -85,6 +96,12 @@ expectTrue($response instanceof ResponseInterface, 'Response does not implement 
 expectTrue($response->getHeaderLine('content-type') === 'application/json', 'Header lookup is not PSR-7 compatible.');
 expectTrue((string) $response->getBody() === '{"result_code":"success"}', 'Body stream does not expose response body.');
 expectTrue($response->withAddedHeader('X-Test', 'a')->withAddedHeader('X-Test', 'b')->getHeaderLine('x-test') === 'a, b', 'Header line formatting is not PSR compatible.');
+expectThrows(static function (): void {
+    new Response(99, [], '');
+}, 'Invalid response status code should fail.');
+expectThrows(static function () use ($response): void {
+    $response->withAddedHeader('Bad Header', 'value');
+}, 'Invalid response header name should fail.');
 
 $request = new Request('POST', 'https://pay.example.com/api/query.do', ['Content-Type' => 'application/json'], '{"foo":"bar"}');
 expectTrue($request instanceof RequestInterface, 'Request does not implement PSR-7 RequestInterface.');
@@ -93,6 +110,12 @@ expectTrue($request->getMethod() === 'POST', 'Request method mismatch.');
 expectTrue($request->getHeaderLine('content-type') === 'application/json', 'Request header lookup is not PSR-7 compatible.');
 expectTrue($request->getHeaderLine('host') === 'pay.example.com', 'Request Host header was not derived from constructor URI.');
 expectTrue($request->withUri(new CongmingPay\Http\Uri('https://other.example.com/path'))->getHeaderLine('host') === 'other.example.com', 'Request Host header was not updated from URI.');
+expectTrue((new Request('get', 'https://pay.example.com/api'))->getMethod() === 'get', 'Request method casing should be preserved.');
+expectTrue((new Request('POST', 'https://pay.example.com:8443/api'))->getHeaderLine('host') === 'pay.example.com:8443', 'Request Host header should include non-default port.');
+expectTrue($request->withUri(new CongmingPay\Http\Uri('https://other.example.com:8443/path'))->getHeaderLine('host') === 'other.example.com:8443', 'Request Host header from withUri should include non-default port.');
+expectThrows(static function () use ($request): void {
+    $request->withAddedHeader('Bad Header', 'value');
+}, 'Invalid request header name should fail.');
 
 $httpWithoutProgramId = new class implements ClientInterface {
     public ?RequestInterface $request = null;
@@ -172,5 +195,47 @@ $payloadPrePay = json_decode((string) $httpDefaults->request->getBody(), true);
 expectTrue(is_array($payloadPrePay), 'Prepay payload is not JSON.');
 expectTrue($payloadPrePay['version'] === '3.0', 'System default version for prePay was not applied.');
 expectTrue($payloadPrePay['profit_share_type'] === '0', 'System default profit_share_type for prePay was not applied.');
+
+$clientWithDefaults->jsNativePay([
+    'order_id' => 'OID_DOUYIN',
+    'money' => '4.00',
+    'order_type' => 'douyin',
+    'pay_type' => 'app',
+    'device' => 'DEVICE_DOUYIN',
+    'notify_url' => 'https://merchant.example.com/douyin-notify',
+]);
+$payloadDouyin = json_decode((string) $httpDefaults->request->getBody(), true);
+expectTrue(is_array($payloadDouyin), 'Douyin app payload is not JSON.');
+expectTrue(!array_key_exists('openid', $payloadDouyin), 'Douyin app jsNativePay should not require openid.');
+
+expectThrows(static function () use ($clientWithDefaults): void {
+    $clientWithDefaults->jsNativePay([
+        'order_id' => 'OID_JSAPI',
+        'money' => '4.00',
+        'order_type' => 'weixin',
+        'device' => 'DEVICE_JSAPI',
+        'notify_url' => 'https://merchant.example.com/jsapi-notify',
+    ]);
+}, 'Non-Douyin jsNativePay should require openid.');
+
+expectThrows(static function () use ($clientWithDefaults): void {
+    $clientWithDefaults->query();
+}, 'Query should require order_id, out_trade_no, or transaction_id.');
+
+expectThrows(static function () use ($clientWithDefaults): void {
+    $clientWithDefaults->refund();
+}, 'Refund should require order_id or shop_order_id.');
+
+expectThrows(static function () use ($clientWithDefaults): void {
+    $clientWithDefaults->queryRefundOrder();
+}, 'Refund query should require refund_order_id or plat_refund_order_id.');
+
+expectThrows(static function () use ($clientWithDefaults): void {
+    $clientWithDefaults->cancelOrder();
+}, 'Cancel order should require order_id or out_trade_no.');
+
+expectThrows(static function () use ($clientWithDefaults): void {
+    $clientWithDefaults->userCancelOrder(['error_msg' => 'user canceled']);
+}, 'User cancel order should require order_id or out_trade_no.');
 
 echo "OK\n";

@@ -16,8 +16,11 @@ final class Request implements RequestInterface
     private const HEADER_NAME_PATTERN = '/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/';
 
     private string $method;
+
     private UriInterface $uri;
+
     private string $requestTarget = '';
+
     private string $protocolVersion = '1.1';
 
     /** @var array<string, string[]> */
@@ -43,7 +46,7 @@ final class Request implements RequestInterface
         }
 
         if ($this->uri->getHost() !== '' && !$this->hasHeader('Host')) {
-            $this->setHeader('Host', $this->uri->getHost());
+            $this->setHeader('Host', $this->getHostFromUri($this->uri));
         }
     }
 
@@ -104,7 +107,7 @@ final class Request implements RequestInterface
         }
 
         if (!$preserveHost || !$new->hasHeader('Host')) {
-            $new = $new->withHeader('Host', $uri->getHost());
+            $new = $new->withHeader('Host', $new->getHostFromUri($uri));
         }
 
         return $new;
@@ -163,6 +166,7 @@ final class Request implements RequestInterface
     {
         $new = clone $this;
         $name = (string) $name;
+        $new->assertHeaderName($name);
         $lower = strtolower($name);
         $values = $new->normalizeHeaderValue($value);
         if (isset($new->headerNames[$lower])) {
@@ -240,12 +244,21 @@ final class Request implements RequestInterface
 
     private function normalizeMethod(string $method): string
     {
-        $method = strtoupper($method);
         if ($method === '' || preg_match(self::METHOD_PATTERN, $method) !== 1) {
             throw new InvalidArgumentException('HTTP method must be a valid token.');
         }
 
         return $method;
+    }
+
+    private function getHostFromUri(UriInterface $uri): string
+    {
+        $host = $uri->getHost();
+        if ($host === '') {
+            return '';
+        }
+
+        return $uri->getPort() === null ? $host : $host . ':' . $uri->getPort();
     }
 
     private function assertHeaderName(string $name): void

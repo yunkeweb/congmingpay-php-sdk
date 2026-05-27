@@ -31,6 +31,7 @@ final class Response implements ResponseInterface
      */
     public function __construct(int $statusCode, array $headers, string $body, string $reasonPhrase = '', string $protocolVersion = '1.1')
     {
+        $this->assertStatusCode($statusCode);
         $this->statusCode = $statusCode;
         $this->reasonPhrase = $reasonPhrase;
         $this->headers = [];
@@ -63,9 +64,7 @@ final class Response implements ResponseInterface
     public function withStatus($code, $reasonPhrase = ''): self
     {
         $code = (int) $code;
-        if ($code < 100 || $code > 599) {
-            throw new InvalidArgumentException('HTTP status code must be between 100 and 599.');
-        }
+        $this->assertStatusCode($code);
 
         $new = clone $this;
         $new->statusCode = $code;
@@ -119,6 +118,7 @@ final class Response implements ResponseInterface
     {
         $new = clone $this;
         $name = (string) $name;
+        $new->assertHeaderName($name);
         $lower = strtolower($name);
         $values = $new->normalizeHeaderValue($value);
         if (isset($new->headerNames[$lower])) {
@@ -198,6 +198,13 @@ final class Response implements ResponseInterface
     {
         if ($name === '' || preg_match(self::HEADER_NAME_PATTERN, $name) !== 1) {
             throw new InvalidArgumentException('Header name must be a valid token.');
+        }
+    }
+
+    private function assertStatusCode(int $code): void
+    {
+        if ($code < 100 || $code > 599) {
+            throw new InvalidArgumentException('HTTP status code must be between 100 and 599.');
         }
     }
 }

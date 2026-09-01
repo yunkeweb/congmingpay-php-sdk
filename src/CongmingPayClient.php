@@ -11,6 +11,7 @@ use CongmingPay\Http\Request;
 use CongmingPay\Support\Signer;
 use InvalidArgumentException;
 use Psr\Http\Client\ClientInterface;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -106,97 +107,225 @@ final class CongmingPayClient
         $this->httpClient = $httpClient ?? new CurlHttpClient($config, $this->logger);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 公众号支付（非原生），对应文档 2-1：POST /api/buyPay.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function buyPay(array $params): ApiResponse
     {
         return $this->call('buyPay', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 统一下单支付，对应文档 2-2：POST /api/jsNativePay.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function jsNativePay(array $params): ApiResponse
     {
         return $this->call('jsNativePay', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 条码支付，对应文档 2-3：POST /api/microPay.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function microPay(array $params): ApiResponse
     {
         return $this->call('microPay', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 预支付/主扫支付，对应文档 2-4：POST /api/v3/vprePay.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function prePay(array $params): ApiResponse
     {
         return $this->call('prePay', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 小程序支付，对应文档 2-5：POST /api/miniAppPay.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function miniAppPay(array $params): ApiResponse
     {
         return $this->call('miniAppPay', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 支付查询，对应文档 2-6：POST /api/query.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function query(array $params = []): ApiResponse
     {
         return $this->call('query', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 退款，对应文档 2-7：POST /api/refund.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function refund(array $params = []): ApiResponse
     {
         return $this->call('refund', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 退款查询，对应文档 2-8：POST /api/queryRefundOrder.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function queryRefundOrder(array $params = []): ApiResponse
     {
         return $this->call('queryRefundOrder', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 撤销或关闭订单，对应文档 2-9：POST /api/cancelOrder.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function cancelOrder(array $params = []): ApiResponse
     {
         return $this->call('cancelOrder', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 延迟分账/预授权完成，对应文档 2-11：POST /api/profitorder.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function profitOrder(array $params): ApiResponse
     {
         return $this->call('profitOrder', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 分账退回，对应文档 2-12：POST /api/profitorderback.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function profitOrderBack(array $params): ApiResponse
     {
         return $this->call('profitOrderBack', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 查询微信配置 appid 及授权目录，对应文档 2-14：POST /api/searchMerchantWxAppMsg.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function searchMerchantWxAppMsg(array $params = []): ApiResponse
     {
         return $this->call('searchMerchantWxAppMsg', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 配置微信 appid 及授权目录，对应文档 2-15：POST /api/setMerchantWxAppMsg.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function setMerchantWxAppMsg(array $params): ApiResponse
     {
         return $this->call('setMerchantWxAppMsg', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 授权码获取用户 openid，对应文档 2-16：POST /api/getOpenidByAuthCode.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function getOpenidByAuthCode(array $params): ApiResponse
     {
         return $this->call('getOpenidByAuthCode', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 用户取消支付，对应文档 2-17：POST /api/userCancelOrder.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function userCancelOrder(array $params): ApiResponse
     {
         return $this->call('userCancelOrder', $params);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * 授权银联用户标识，对应文档 2-18：POST /api/getUnionOpenid.do。
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     public function getUnionOpenid(array $params): ApiResponse
     {
         return $this->call('getUnionOpenid', $params);
@@ -206,13 +335,22 @@ final class CongmingPayClient
      * Use this for document endpoints that are not wrapped yet.
      *
      * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when the request URI or headers are invalid.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
      */
     public function request(string $path, array $params = []): ApiResponse
     {
         return $this->sendJson($path, $this->signedPayload($params));
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * Merge defaults, inject shop_id/program_id, and attach the request signature.
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
     public function signedPayload(array $params, ?string $endpointKey = null): array
     {
         $payload = array_merge(
@@ -234,7 +372,15 @@ final class CongmingPayClient
         return $payload;
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * Sign the payload, then enforce required fields and endpoint-specific rules.
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when the API method name is unknown or a required parameter is missing.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     private function call(string $name, array $params): ApiResponse
     {
         if (!isset(self::ENDPOINTS[$name])) {
@@ -254,7 +400,15 @@ final class CongmingPayClient
         return $this->sendJson(self::ENDPOINTS[$name], $payload);
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * Encode and send a signed JSON request, then wrap the PSR-7 response.
+     *
+     * @param array<string, mixed> $payload
+     * @throws InvalidArgumentException when the request URI or headers are invalid.
+     * @throws InvalidResponseException when the request payload cannot be JSON-encoded.
+     * @throws HttpException when cURL or the HTTP status indicates a transport failure.
+     * @throws ClientExceptionInterface when the injected PSR-18 client rejects the request.
+     */
     private function sendJson(string $path, array $payload): ApiResponse
     {
         $url = $this->config->getBaseUri() . '/' . ltrim($path, '/');
@@ -274,7 +428,7 @@ final class CongmingPayClient
                 'endpoint' => $path,
                 'status_code' => $response->getStatusCode(),
             ]);
-            throw new HttpException(sprintf('Unexpected HTTP status code %d: %s', $response->getStatusCode(), (string) $response->getBody()));
+            throw new HttpException(sprintf('Unexpected HTTP status code %d: %s', $response->getStatusCode(), $response->getBody()->__toString()));
         }
 
         return new ApiResponse($response, $this->decodeJson($response));
@@ -328,6 +482,7 @@ final class CongmingPayClient
     /**
      * @param array<string, mixed> $params
      * @param string[] $required
+     * @throws InvalidArgumentException when a required parameter is missing.
      */
     private function assertRequired(array $params, array $required): void
     {
@@ -341,6 +496,7 @@ final class CongmingPayClient
     /**
      * @param array<string, mixed> $params
      * @param array<int, string[]> $groups
+     * @throws InvalidArgumentException when none of the alternative required parameters is present.
      */
     private function assertRequiredOneOf(array $params, array $groups): void
     {
@@ -358,18 +514,47 @@ final class CongmingPayClient
         }
     }
 
-    /** @param array<string, mixed> $params */
+    /**
+     * Endpoint-specific conditional checks after the common required-field rules.
+     *
+     * @param array<string, mixed> $params
+     * @throws InvalidArgumentException when an endpoint-specific required parameter is missing.
+     */
     private function assertEndpointRules(string $name, array $params): void
     {
-        if ($name !== 'jsNativePay') {
+        if ($name === 'jsNativePay') {
+            $isDouyinApp = ($params['order_type'] ?? null) === 'douyin'
+                && ($params['pay_type'] ?? null) === 'app';
+
+            if (!$isDouyinApp) {
+                $this->assertRequired($params, ['openid']);
+            }
+
             return;
         }
 
-        $isDouyinApp = ($params['order_type'] ?? null) === 'douyin'
-            && ($params['pay_type'] ?? null) === 'app';
+        // is_profit 1 (string or int) with empty auth_money requires profit_rule.
+        if ($name === 'profitOrder') {
+            $isProfit = $params['is_profit'] ?? null;
+            $authMoneyEmpty = !array_key_exists('auth_money', $params)
+                || $params['auth_money'] === null
+                || $params['auth_money'] === '';
 
-        if (!$isDouyinApp) {
-            $this->assertRequired($params, ['openid']);
+            if (($isProfit === 1 || $isProfit === '1') && $authMoneyEmpty) {
+                $this->assertRequired($params, ['profit_rule']);
+            }
+
+            return;
+        }
+
+        // config_type=appid requires appid; path requires auth_list; other values (e.g. sub) pass through.
+        if ($name === 'setMerchantWxAppMsg') {
+            $configType = $params['config_type'] ?? null;
+            if ($configType === 'appid') {
+                $this->assertRequired($params, ['appid']);
+            } elseif ($configType === 'path') {
+                $this->assertRequired($params, ['auth_list']);
+            }
         }
     }
 }
